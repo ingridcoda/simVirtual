@@ -11,20 +11,14 @@ typedef struct pagina {
 
 int contPageFaults = 0, contPagsSujas = 0, debug = 0;
 
-int calculaShift(int tamPag){
-	if(tamPag == 8){
-		return 13;
-	}
-	else if(tamPag == 16){
-		return 14;
-	}
-	else if(tamPag == 32){
-		return 15;
-	}
+int calculaShift(int tamPag) {
+	if(tamPag == 8)	return 13;
+	else if(tamPag == 16) return 14;
+	else if(tamPag == 32) return 15;
 	return 0;
 }
 
-void imprimeVetor(Pagina ** tabelaPags, int tamVet){
+void imprimeVetor(Pagina ** tabelaPags, int tamVet) {
 	int i;
 
 	for(i = 0; i < tamVet; i++){
@@ -32,7 +26,7 @@ void imprimeVetor(Pagina ** tabelaPags, int tamVet){
 	}
 }
 
-Pagina ** substituiNRU(Pagina ** tabelaPags, int shift, int i, unsigned int tempEnd, char tempRW){
+Pagina ** substituiNRU(Pagina ** tabelaPags, int shift, int i, unsigned int tempEnd, char tempRW) {
 	tabelaPags[i]->endereco = tempEnd >> shift;
 	tabelaPags[i]->r = 1;
 	tabelaPags[i]->t = 0;
@@ -40,14 +34,14 @@ Pagina ** substituiNRU(Pagina ** tabelaPags, int shift, int i, unsigned int temp
 	if(tempRW == 'W') tabelaPags[i]->m = 1;
 	else tabelaPags[i]->m = 0;
 
-	if(debug) printf("NRU tempEnd %x endereco %x i %d\n", tempEnd, tabelaPags[i]->endereco, i);
+	if(debug) printf("NRU: endereco lido %x - endereco armazenado %x - posicao do vetor %d\n", tempEnd, tabelaPags[i]->endereco, i);
 
 	return tabelaPags;
 }
 
 
-Pagina ** trataNRU(Pagina ** tabelaPags, int shift, int tamVet, unsigned int tempEnd, char tempRW){
-	int i, tipo = 5;
+Pagina ** trataNRU(Pagina ** tabelaPags, int shift, int tamVet, unsigned int tempEnd, char tempRW) {
+	int i;
 
 	if(debug) {
 		printf("Vetor antes substituição NRU:\n");
@@ -57,29 +51,25 @@ Pagina ** trataNRU(Pagina ** tabelaPags, int shift, int tamVet, unsigned int tem
 	for(i = 0; i < tamVet; i++){
 		//Não referenciada, não modificada
 		if(tabelaPags[i]->r == 0 && tabelaPags[i]->m == 0){
-			if(tipo > 1) tipo = 1;
 			break;
 		}
 		//Não referenciada, modificada
 		else if(tabelaPags[i]->r == 0 && tabelaPags[i]->m){
-			if(tipo > 2) tipo = 2;
+			contPagsSujas++;
 			break;
 		}
 		//Referenciada, não modificada
-		else if(tabelaPags[i]->r > 0 && tabelaPags[i]->m == 0){
-			if(tipo > 3) tipo = 3;
-			break;
+		else if(tabelaPags[i]->r > 0 && tabelaPags[i]->m == 0){			
+			break;		
 		}
 		//Referenciada, modificada
 		else if(tabelaPags[i]->r > 0 && tabelaPags[i]->m){
-			if(tipo > 4) tipo = 4;
-			break;
+			contPagsSujas++;
+			break;	
 		}
 	}
 
 	tabelaPags = substituiNRU(tabelaPags, shift, i, tempEnd, tempRW);
-
-	if(tipo % 2 == 0) contPagsSujas++;
 
 	if(debug) {
 		printf("NRU: fim do tratamento\n");
@@ -90,7 +80,7 @@ Pagina ** trataNRU(Pagina ** tabelaPags, int shift, int tamVet, unsigned int tem
 	return tabelaPags;
 }
 
-Pagina ** trataLRU(Pagina ** tabelaPags, int shift, int tamVet, unsigned int tempEnd, char tempRW){
+Pagina ** trataLRU(Pagina ** tabelaPags, int shift, int tamVet, unsigned int tempEnd, char tempRW) {
 	int i, maior = 0;
 
 	if(debug) {
@@ -114,7 +104,7 @@ Pagina ** trataLRU(Pagina ** tabelaPags, int shift, int tamVet, unsigned int tem
 	else tabelaPags[maior]->m = 0;
 
 	if(debug) {
-		printf("LRU tempEnd %x endereco %x maior %d\n", tempEnd, tabelaPags[maior]->endereco, maior);
+		printf("LRU: endereco lido %x - endereco armazenado %x - posicao do vetor %d\n", tempEnd, tabelaPags[maior]->endereco, maior);
 		printf("LRU: fim do tratamento\n");
 		printf("Vetor depois substituição LRU:\n");
 		imprimeVetor(tabelaPags, tamVet);
@@ -123,7 +113,7 @@ Pagina ** trataLRU(Pagina ** tabelaPags, int shift, int tamVet, unsigned int tem
 }
 
 
-int main (int argc, char * argv[]){
+int main (int argc, char * argv[]) {
 	char nomeArq[50]; 
 	int i, tamPag, tamMem, tamVet, shift;
 	char tpalgoritmo[3];
@@ -175,16 +165,17 @@ int main (int argc, char * argv[]){
 			//Pagina ja existe na tabela, so referencia
 			if(tabelaPags[i]->endereco != 0 && tabelaPags[i]->endereco == (tempEnd >> shift)) {
 				if(debug) {
-					printf("Vetor antes caso IF:\n");
+					printf("Caso 1 - Pagina ja esta na tabela - Vetor antes:\n");
 					imprimeVetor(tabelaPags, tamVet);
-					printf("IF tempEnd %x endereco %x\n", tempEnd, tabelaPags[i]->endereco);
+					printf("Caso 1: endereco lido %x mantido na tabela\n", tempEnd);
 				}
 				(tabelaPags[i]->r)++;
+				tabelaPags[i]->t = 0;
 
 				if(tempRW == 'W') tabelaPags[i]->m = 1;
 				else tabelaPags[i]->m = 0;
 				if(debug) {
-					printf("Vetor depois caso IF:\n");
+					printf("Caso 1 - Pagina ja esta na tabela - Vetor depois:\n");
 					imprimeVetor(tabelaPags, tamVet);
 				}
 				break;
@@ -192,7 +183,7 @@ int main (int argc, char * argv[]){
 			//Pagina nao existe na tabela, e tabela nao esta cheia, adiciona na tabela e referencia
 			else if(tabelaPags[i]->endereco == 0) {
 				if(debug) {
-					printf("Vetor antes caso ELSE IF:\n");
+					printf("Caso 2 - Pagina nao esta na tabela e tem espaco para adicionar - Vetor antes:\n");
 					imprimeVetor(tabelaPags, tamVet);
 				}
 				tabelaPags[i]->endereco = tempEnd >> shift;
@@ -201,15 +192,15 @@ int main (int argc, char * argv[]){
 				if(tempRW == 'W') tabelaPags[i]->m = 1;
 				else tabelaPags[i]->m = 0;
 				if(debug) {
-					printf("ELSE IF tempEnd %x endereco %x\n", tempEnd, tabelaPags[i]->endereco);
-					printf("Vetor depois caso ELSE IF:\n");
+					printf("Caso 2: endereco lido %x - endereco armazenado %x - posicao do vetor %d\n", tempEnd, tabelaPags[i]->endereco, i);
+					printf("Caso 2 - Pagina nao esta na tabela e tem espaco para adicionar - Vetor depois:\n");
 					imprimeVetor(tabelaPags, tamVet);
 				}
 				break;
 			} 
 			//Pagina nao existe na tabela, e tabela esta cheia, chama algoritmo de substituicao
-			else if(tabelaPags[i]->endereco != 0 && tabelaPags[i]->endereco != (tempEnd >> shift) && i == (tamVet-1)){
-				if(debug) printf("ELSE - PAGEFAULTS %d\n", contPageFaults);
+			else if(tabelaPags[i]->endereco != 0 && tabelaPags[i]->endereco != (tempEnd >> shift) && i == (tamVet-1)) {
+				if(debug) printf("Caso 3 - Pagefault %d\n", (contPageFaults + 1));
 
 				contPageFaults++;
 
